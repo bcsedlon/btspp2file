@@ -20,6 +20,7 @@ import android.os.Binder;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.os.SystemClock;
 //import android.support.annotation.Nullable;
 //import android.support.v4.content.LocalBroadcastManager;
@@ -145,14 +146,14 @@ public class BTSPP2FileService extends Service {
         Log.d(TAG, "Service Created");
     }
 
-    //PowerManager.WakeLock wl;
+    PowerManager.WakeLock wl;
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
-        //PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-        //PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "My Tag");
-        //wl = pm.newWakeLock(PowerManager..SCREEN_DIM_WAKE_LOCK, "My Tag");
-        //wl.acquire();
+        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "My Tag");
+        wl = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "My Tag");
+        wl.acquire();
 
         Log.d(TAG, "Service Starting...");
 
@@ -241,7 +242,7 @@ public class BTSPP2FileService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        //wl.release();
+        wl.release();
         btCancel();
         Log.d(TAG, "Service Destroyed");
     }
