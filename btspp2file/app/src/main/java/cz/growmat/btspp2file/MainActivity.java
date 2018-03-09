@@ -155,6 +155,7 @@ public class MainActivity extends Activity {
         mDevicesListView.setAdapter(mBTArrayAdapter); // assign model to view
         mDevicesListView.setOnItemClickListener(mDeviceClickListener);
 
+
         mAlarmManagerBroadcastReceiver = new AlarmManagerBroadcastReceiver();
         mDeviceBootReceiver = new DeviceBootReceiver();
 
@@ -504,7 +505,7 @@ public class MainActivity extends Activity {
             if (BluetoothDevice.ACTION_FOUND.equals(action)) {
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 // Add the name to the list
-                mBTArrayAdapter.add(device.getName() + "\n" + device.getAddress());
+                mBTArrayAdapter.add(device.getName() + " " + device.getAddress());
                 mBTArrayAdapter.notifyDataSetChanged();
             }
         }
@@ -520,9 +521,11 @@ public class MainActivity extends Activity {
             // Put it's one to the adapter
             for (BluetoothDevice device : mPairedDevices) {
                 mBTArrayAdapter.add(device.getName() + " " + device.getAddress());
+
             }
         } else {
         }
+        mBTArrayAdapter.notifyDataSetChanged();
     }
 
     private AdapterView.OnItemClickListener mDeviceClickListener = new AdapterView.OnItemClickListener() {
