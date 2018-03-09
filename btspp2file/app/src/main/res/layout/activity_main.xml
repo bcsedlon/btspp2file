@@ -13,225 +13,258 @@
         android:layout_height="match_parent"
         tools:ignore="UselessParent">
 
-    <LinearLayout
-        android:orientation="vertical"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-        <TextView
-            android:id="@+id/textView8"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textSize="16sp"
-            android:textColor="#000"
-            android:text="RX FILE" />
-
-        <EditText
-            android:id="@+id/editTextFileRecName"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ems="10"
-            android:inputType="textPersonName" />
-        <TextView
-            android:id="@+id/textView9"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textSize="16sp"
-            android:textColor="#000"
-            android:text="TX FILE" />
-
-        <EditText
-            android:id="@+id/editTextFileTransName"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ems="10"
-            android:inputType="textPersonName" />
-
-        <TextView
-            android:id="@+id/textView5"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textSize="16sp"
-            android:textColor="#000"
-            android:text="START ON BOOT" />
-
-        <ToggleButton
-            android:id="@+id/toggleButtonAutoStart"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:onClick="OnClick"
-            android:text="ToggleButton" />
-
-        <TextView
-            android:id="@+id/textView6"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textSize="16sp"
-            android:textColor="#000"
-            android:text="TEST" />
-        <ToggleButton
-            android:id="@+id/toggleButtonAutoTest"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:onClick="OnClick"
-            android:text="ToggleButton" />
-
-        <TextView
-            android:id="@+id/textView5"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textSize="16sp"
-            android:textColor="#000"
-            android:text="WAIT FOR RESPONSE" />
-
-        <ToggleButton
-            android:id="@+id/toggleButtonWaitForResponse"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:onClick="OnClick"
-            android:text="ToggleButton" />
-
-
         <LinearLayout
-            android:orientation="horizontal"
+            android:orientation="vertical"
             android:layout_width="match_parent"
-            android:layout_marginTop="10dp"
             android:layout_height="wrap_content">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.1"
-                android:text="RX:"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textSize="16sp"
-                android:textColor="#000"/>
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:textColor="#000"
-                android:layout_weight="0.8"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:text="&lt;Read Buffer>"
-                android:id="@+id/readBuffer"
-                android:layout_centerHorizontal="true" />
-        </LinearLayout>
 
         <LinearLayout
             android:orientation="horizontal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.9"
+            <ImageView
+                android:id="@+id/icon"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:layout_marginBottom="5dp"
+                android:layout_marginLeft="5dp"
+                android:layout_marginRight="5dp"
+                android:layout_marginTop="5dp"
+                android:src="@drawable/ic_settings_input_component_black_24dp" />
 
-                android:text="&lt;Bluetooth Status>"
+            <TextView
+
                 android:id="@+id/bluetoothStatus"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textSize="16sp"
-                android:textColor="#000"
-                android:layout_centerHorizontal="true"
-                android:layout_alignTop="@+id/checkboxLED1" />
+                android:textStyle="bold"
+                android:textSize="18dp"
+                android:textAlignment="center"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
         </LinearLayout>
 
-        <Button
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Bluetooth ON"
-            android:id="@+id/scan"
-            android:layout_centerVertical="true" />
-            <!--android:layout_toStartOf="@+id/off"-->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@android:color/black"/>
+
+            <TextView
+                android:id="@+id/textViewStartOnBoot"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAlignment="center"
+                android:text="START ON BOOT" />
+            <ToggleButton
+                android:id="@+id/toggleButtonAutoStart"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:onClick="OnClick"
+                android:text="ToggleButton" />
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@android:color/black"/>
+
+            <TextView
+                android:id="@+id/textViewAutoTest"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAlignment="center"
+                android:text="AUTO TEST" />
+            <ToggleButton
+                android:id="@+id/toggleButtonAutoTest"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:onClick="OnClick"
+                android:text="ToggleButton" />
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@android:color/black"/>
+
+            <TextView
+                android:id="@+id/textViewWaitForResponse"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAlignment="center"
+                android:text="WAIT FOR ANSWER" />
+
+            <ToggleButton
+                android:id="@+id/toggleButtonWaitForAnswer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:onClick="OnClick"
+                android:text="ToggleButton" />
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@android:color/black"/>
+
+            <!--
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_marginTop="10dp"
+                android:layout_height="wrap_content">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.1"
+                    android:text="RX:"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textSize="16sp"
+                    android:textColor="#000"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="16sp"
+                    android:textColor="#000"
+                    android:layout_weight="0.8"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="&lt;Read Buffer>"
+                    android:id="@+id/readBuffer"
+                    android:layout_centerHorizontal="true" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.9"
+
+                    android:text="&lt;Bluetooth Status>"
+                    android:id="@+id/bluetoothStatus"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textSize="16sp"
+                    android:textColor="#000"
+                    android:layout_centerHorizontal="true"
+                    android:layout_alignTop="@+id/checkboxLED1" />
+            </LinearLayout>
+    -->
+            <!--
+            <Button
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Bluetooth ON"
+                android:id="@+id/scan"
+                android:layout_centerVertical="true" />
+
+            <Button
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Bluetooth OFF"
+                android:id="@+id/off"
+                android:layout_alignBottom="@+id/scan" />
+    -->
+            <!--         <Button
+                         android:layout_width="match_parent"
+                         android:layout_height="wrap_content"
+                         android:text="SHOW PAIRED DEVICES"
+                         android:onClick="OnClick"
+                         android:id="@+id/buttonPaired" />
+
+
 
         <Button
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Bluetooth OFF"
-            android:id="@+id/off"
-            android:layout_alignBottom="@+id/scan" />
-        <!--android:layout_toEndOf="@+id/PairedBtn"
-        android:layout_toRightOf="@+id/PairedBtn"-->
-
-    <Button
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Show paired Devices"
-        android:id="@+id/PairedBtn"
-        android:layout_below="@+id/scan" />
-        <!--android:layout_toStartOf="@+id/discover" -->
+            android:text="Discover New Devices"
+            android:id="@+id/discover"
+            android:layout_below="@+id/off"
+            android:layout_toRightOf="@+id/checkboxLED1"
+            android:layout_toEndOf="@+id/checkboxLED1" />
+    -->
+            <TextView
+                android:id="@+id/textPairedDevices"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAlignment="center"
+                android:text="PAIRED DEVICES" />
+            <ListView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/devicesListView"
+                android:choiceMode="singleChoice"
+                tools:ignore="NestedScrolling,ObsoleteLayoutParam" />
 
     <!--
-    <Button
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Discover New Devices"
-        android:id="@+id/discover"
-        android:layout_below="@+id/off"
-        android:layout_toRightOf="@+id/checkboxLED1"
-        android:layout_toEndOf="@+id/checkboxLED1" />
--->
-        <ListView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:id="@+id/devicesListView"
-            android:choiceMode="singleChoice"
-            android:layout_below="@+id/PairedBtn"
-            android:layout_alignRight="@+id/off"
-            tools:ignore="NestedScrolling,ObsoleteLayoutParam" />
+            <Button
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="TEST VIBRATION"
+                android:id="@+id/test1"/>
+            <Button
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="TEST BLUETOOTH DEVICE"
+                android:id="@+id/send"/>
+    -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@android:color/black"/>
 
+            <Button
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="STOP AND EXIT!"
+                android:textStyle="bold"
+                android:textSize="18dp"
+                android:onClick="OnClick"
+                android:id="@+id/buttonCancel"/>
 
-        <Button
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="TEST VIBRATION"
-            android:id="@+id/test1"/>
-        <Button
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="TEST BLUETOOTH DEVICE"
-            android:id="@+id/send"/>
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@android:color/black"/>
 
-        <Button
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="STOP SERVICE AND EXIT!"
-            android:id="@+id/cancel"/>
+            <TextView
+                android:id="@+id/textInfo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAlignment="center"
+                android:text="INFO" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="NOTIFICATIONS:"
-            android:id="@+id/notifications"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textSize="16sp"
-            android:textColor="#000"
-            android:layout_centerHorizontal="true"/>
-        <ListView
-            android:id="@+id/list"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentTop="true"
-            tools:ignore="NestedScrolling">
-        </ListView>
+            <TextView
+                android:id="@+id/textInfoText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+            <!--
+                     <Button
+                         android:layout_width="match_parent"
+                         android:layout_height="wrap_content"
+                         android:text="OPEN FOLDER"
+                         android:textSize="18dp"
+                         android:onClick="OnClick"
+                         android:id="@+id/buttonOpenFolder"/>
 
-    </LinearLayout>
+                     <TextView
+                         android:layout_width="match_parent"
+                         android:layout_height="wrap_content"
+                         android:text="NOTIFICATIONS:"
+                         android:id="@+id/notifications"
+                         android:ellipsize="end"
+                         android:maxLines="1"
+                         android:textSize="16sp"
+                         android:textColor="#000"
+                         android:layout_centerHorizontal="true"/>
+                     <ListView
+                         android:id="@+id/list"
+                         android:layout_width="match_parent"
+                         android:layout_height="wrap_content"
+                         android:layout_alignParentLeft="true"
+                         android:layout_alignParentTop="true"
+                         tools:ignore="NestedScrolling">
+                     </ListView>
+             -->
+        </LinearLayout>
     </ScrollView>
-
-
 </LinearLayout>

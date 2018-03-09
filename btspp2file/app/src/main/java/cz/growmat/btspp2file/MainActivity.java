@@ -16,7 +16,9 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 //import android.graphics.ColorSpace;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Vibrator;
@@ -48,7 +50,7 @@ public class MainActivity extends Activity {
     final public static String TAG = MainActivity.class.getName();
 
     private AlarmManagerBroadcastReceiver mAlarmManagerBroadcastReceiver;
-    private DeviceBootReceiver mDeviceBootReciever;
+    private DeviceBootReceiver mDeviceBootReceiver;
 
     boolean mBTSPP2FileServiceBounded;
     BTSPP2FileService mBTSPP2FileService;
@@ -58,18 +60,20 @@ public class MainActivity extends Activity {
     BaseAdapter adapter;
     //ArrayList<ColorSpace.Model> modelList;
 
-    private ToggleButton toggleButtonAutoStart;
+    private ToggleButton tButtonAutoStart;
     private ToggleButton tButtonAutoTest;
-    private ToggleButton tButtonWaitForResponse;
-    private TextView mBluetoothStatus;
-    private TextView mReadBuffer;
-    private Button mTest1Btn;
-    private Button mScanBtn;
-    private Button mSendBtn;
-    private Button mCancelBtn;
-    private Button mOffBtn;
-    private Button mListPairedDevicesBtn;
-    private Button mDiscoverBtn;
+    private ToggleButton tButtonWaitForAnswer;
+    private TextView mTextViewBluetoothStatus;
+    private TextView mTextViewInfoText;
+    //private Button mButtonOpenFolder;
+    //private TextView mReadBuffer;
+    //private Button mTest1Btn;
+    //private Button mScanBtn;
+    //private Button mSendBtn;
+    //private Button mCancelBtn;
+    //private Button mOffBtn;
+    //private Button mListPairedDevicesBtn;
+    //private Button mDiscoverBtn;
     private BluetoothAdapter mBTAdapter;
     private Set<BluetoothDevice> mPairedDevices;
     private ArrayAdapter<String> mBTArrayAdapter;
@@ -84,6 +88,8 @@ public class MainActivity extends Activity {
     private final static int MESSAGE_READ = 2; // used in bluetooth handler to identify message update
     private final static int CONNECTING_STATUS = 3; // used in bluetooth handler to identify message status
 
+    SharedPreferences mPrefs;
+    SharedPreferences.Editor mEditor;
 
     private boolean isMyServiceRunning(Class<?> serviceClass) {
         ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
@@ -125,13 +131,22 @@ public class MainActivity extends Activity {
             }
         }.start();
 
-        mBluetoothStatus = (TextView) findViewById(R.id.bluetoothStatus);
+        mTextViewBluetoothStatus = (TextView) findViewById(R.id.bluetoothStatus);
+        mTextViewInfoText = (TextView) findViewById(R.id.textInfoText);
+        /*
         mReadBuffer = (TextView) findViewById(R.id.readBuffer);
         mTest1Btn = (Button) findViewById(R.id.test1);
         mScanBtn = (Button) findViewById(R.id.scan);
         mOffBtn = (Button) findViewById(R.id.off);
+        mSendBtn = (Button) findViewById(R.id.send);
         //mDiscoverBtn = (Button) findViewById(R.id.discover);
-        mListPairedDevicesBtn = (Button) findViewById(R.id.PairedBtn);
+        */
+        //mListPairedDevicesBtn = (Button) findViewById(R.id.buttonPaired);
+        tButtonAutoStart = (ToggleButton) findViewById(R.id.toggleButtonAutoStart);
+        tButtonAutoTest = (ToggleButton) findViewById(R.id.toggleButtonAutoTest);
+        tButtonWaitForAnswer = (ToggleButton) findViewById(R.id.toggleButtonWaitForAnswer);
+        //mCancelBtn = (Button) findViewById(R.id.buttonCancel);
+        //mButtonOpenFolder = (Button) findViewById(R.id.buttonOpenFolder);
 
         mBTArrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1);
         mBTAdapter = BluetoothAdapter.getDefaultAdapter(); // get a handle on the bluetooth radio
@@ -140,8 +155,14 @@ public class MainActivity extends Activity {
         mDevicesListView.setAdapter(mBTArrayAdapter); // assign model to view
         mDevicesListView.setOnItemClickListener(mDeviceClickListener);
 
-        mSendBtn = (Button) findViewById(R.id.send);
-        mCancelBtn = (Button) findViewById(R.id.cancel);
+        mAlarmManagerBroadcastReceiver = new AlarmManagerBroadcastReceiver();
+        mDeviceBootReceiver = new DeviceBootReceiver();
+
+        //SharedPreferences mPrefs = getSharedPreferences(Constants.PREFS_NAME, 0);
+        //SharedPreferences.Editor mEditor = mPrefs.edit();
+        mPrefs = getSharedPreferences(Constants.PREFS_NAME, 0);
+        mEditor = mPrefs.edit();
+
 
         mHandler = new Handler() {
             public void handleMessage(android.os.Message msg) {
@@ -152,74 +173,68 @@ public class MainActivity extends Activity {
                     } catch (UnsupportedEncodingException e) {
                         e.printStackTrace();
                     }
-                    mReadBuffer.setText(readMessage);
+                    //mReadBuffer.setText(readMessage);
                 }
 
                 if (msg.what == CONNECTING_STATUS) {
-                    mBluetoothStatus.setText((String) (msg.obj));
-                    /*if (msg.arg1 == 1)
-                        mBluetoothStatus.setText("Connecting to Device: " + (String) (msg.obj));
-                    if (msg.arg1 == 2)
-                        mBluetoothStatus.setText("Connected to Device: " + (String) (msg.obj));
-                    else
-                        mBluetoothStatus.setText("Connection Failed");
-                    */
+                    mTextViewBluetoothStatus.setText((String) (msg.obj));
                 }
             }
         };
 
         if (mBTArrayAdapter == null) {
             // Device does not support Bluetooth
-            mBluetoothStatus.setText("BLUETOOTH NOT FOUND");
+            mTextViewBluetoothStatus.setText("BLUETOOTH NOT FOUND");
             Log.d(TAG, "Bluetooth device not found");
         } else {
+            /*
             mScanBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     bluetoothOn(v);
                 }
             });
+            */
+            /*
             mOffBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     bluetoothOff(v);
                 }
             });
+            */
+            /*
             mSendBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    /*
-                    if(mConnectedThread != null) {
-                       if(mConnectedThread.isAlive())  {
-                           mConnectedThread.write("0");
-                       }
-                    }
-                    */
                     mBTSPP2FileService.btSend("d13,1;");
                 }
             });
-
+            */
+/*
             mCancelBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     NotificationManager notificationManager = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
                     notificationManager.cancelAll();
-                    mBTSPP2FileService.streamServiceThreadRun = false;
+                    mBTSPP2FileService.serviceThreadRun = false;
                     mBTSPP2FileService.btCancel();
                     unbindService(mConnection);
                     stopService(new Intent(getBaseContext(), BTSPP2FileService.class));
-                    //stopService(new Intent(getBaseContext(), NotificationService.class));
                     System.exit(0);
+
                 }
             });
-
+*/
+/*
             mListPairedDevicesBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     listPairedDevices(v);
                 }
             });
-
+*/
+            /*
             mTest1Btn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -229,13 +244,9 @@ public class MainActivity extends Activity {
 
                 }
             });
+            */
 
-            mAlarmManagerBroadcastReceiver = new AlarmManagerBroadcastReceiver();
-            mDeviceBootReciever = new DeviceBootReceiver();
 
-            toggleButtonAutoStart = (ToggleButton) findViewById(R.id.toggleButtonAutoStart);
-            tButtonAutoTest = (ToggleButton) findViewById(R.id.toggleButtonAutoTest);
-            tButtonWaitForResponse = (ToggleButton) findViewById(R.id.toggleButtonWaitForResponse);
 /*
             mDiscoverBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -245,55 +256,57 @@ public class MainActivity extends Activity {
             });*/
         }
 
-        mListPairedDevicesBtn.performClick();
+        listPairedDevices();
     }
 
 
 
     public void OnClick(View view) {
-        SharedPreferences mPrefs = getSharedPreferences(Constants.PREFS_NAME, 0);
-
         switch (view.getId()) {
 
+            case R.id.buttonCancel: {
+                NotificationManager notificationManager = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+                notificationManager.cancelAll();
+                mBTSPP2FileService.serviceThreadRun = false;
+                mBTSPP2FileService.btCancel();
+                unbindService(mConnection);
+                stopService(new Intent(getBaseContext(), BTSPP2FileService.class));
+                System.exit(0);
+            }
+
+            /*
+            case R.id.buttonPaired: {
+                listPairedDevices();//view);
+            }
+            */
 
             case R.id.toggleButtonAutoStart: {
                 Context context = this.getApplicationContext();
-                if (toggleButtonAutoStart.isChecked()) {
+                if (tButtonAutoStart.isChecked()) {
                     //startRepeatingTimer(view);
-                    mDeviceBootReciever.enable(context);
-
+                    mDeviceBootReceiver.enable(context);
                 }
                 else {
                     //cancelRepeatingTimer(view);
-                    mDeviceBootReciever.disable(context);
+                    mDeviceBootReceiver.disable(context);
                 }
             }
 
             case R.id.toggleButtonAutoTest: {
+                mEditor.putBoolean(Constants.PREFS_NAME_AUTO_TEST, tButtonAutoTest.isChecked()).commit();
                 if(tButtonAutoTest.isChecked()) {
-                    if(!mBTSPP2FileService.autoTest) {
-                        mBTSPP2FileService.autoTest = true;
-                        mBTSPP2FileService.startAutoTest();
-                    }
+                    //if(mBTSPP2FileService != null) {
+                    mBTSPP2FileService.startAutoTest();
+                    //}
                 }
                 else {
-                    mBTSPP2FileService.autoTest = false;
+                    mBTSPP2FileService.stopAutoTest();
                 }
-
-                SharedPreferences.Editor mEditor = mPrefs.edit();
-                mEditor.putBoolean(Constants.PREFS_NAME_AUTO_TEST, mBTSPP2FileService.autoTest).commit();
             }
 
-            case R.id.toggleButtonWaitForResponse: {
-                if (tButtonAutoTest.isChecked()) {
-                    SharedPreferences.Editor mEditor = mPrefs.edit();
-                    mEditor.putBoolean(Constants.PREFS_NAME_WAIT_FOR_ANSWER, true).commit();
-
-                } else {
-                    SharedPreferences.Editor mEditor = mPrefs.edit();
-                    mEditor.putBoolean(Constants.PREFS_NAME_WAIT_FOR_ANSWER, false).commit();
-
-                }
+            case R.id.toggleButtonWaitForAnswer: {
+                mEditor.putBoolean(Constants.PREFS_NAME_WAIT_FOR_ANSWER, tButtonAutoTest.isChecked()).commit();
+                mBTSPP2FileService.waitForAnswer = tButtonAutoTest.isChecked();
             }
         }
     }
@@ -342,13 +355,10 @@ public class MainActivity extends Activity {
                 new Intent(context, AlarmManagerBroadcastReceiver.class),
                 PendingIntent.FLAG_NO_CREATE) != null);
 
-        //fasdffsdf
-
-
-        if(mDeviceBootReciever.getComponentEnabledSetting(context) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED)
-            toggleButtonAutoStart.setChecked(true);
+        if(mDeviceBootReceiver.getComponentEnabledSetting(context) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED)
+            tButtonAutoStart.setChecked(true);
         else
-            toggleButtonAutoStart.setChecked(false);
+            tButtonAutoStart.setChecked(false);
 
         SharedPreferences mPrefs = getSharedPreferences(Constants.PREFS_NAME, 0);
         if(mPrefs.getBoolean(Constants.PREFS_NAME_AUTO_TEST, true))
@@ -357,9 +367,13 @@ public class MainActivity extends Activity {
             tButtonAutoTest.setChecked(false);
 
         if(mPrefs.getBoolean(Constants.PREFS_NAME_WAIT_FOR_ANSWER, true))
-            tButtonWaitForResponse.setChecked(true);
+            tButtonWaitForAnswer.setChecked(true);
         else
-            tButtonWaitForResponse.setChecked(false);
+            tButtonWaitForAnswer.setChecked(false);
+
+        mTextViewInfoText.setText(" PATH: " + Environment.getExternalStorageDirectory().getAbsolutePath() + mPrefs.getString(Constants.PREFS_NAME_PATH, Constants.DEFAULT_PATH) +
+                "\n RX FILE: " + Constants.DEFAULT_RX_FILENAME +
+                "\n TX FILE: " + Constants.DEFAULT_TX_FILENAME);
     }
 
     @Override
@@ -439,7 +453,7 @@ public class MainActivity extends Activity {
             //Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             //startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
             if(mBTAdapter.enable());
-                mBluetoothStatus.setText("BLUETOOTH ENABLED");
+                mTextViewBluetoothStatus.setText("BLUETOOTH ENABLED");
             Log.d(TAG, "Bluetooth enabled");
         } else {
         }
@@ -454,19 +468,19 @@ public class MainActivity extends Activity {
             if (resultCode == RESULT_OK) {
                 // The user picked a contact.
                 // The Intent's data Uri identifies which contact was selected.
-                mBluetoothStatus.setText("BLUETOOTH ENABLED");
+                mTextViewBluetoothStatus.setText("BLUETOOTH ENABLED");
             } else
-                mBluetoothStatus.setText("BLUETOOTH DISABLED");
+                mTextViewBluetoothStatus.setText("BLUETOOTH DISABLED");
         }
     }
 
     private void bluetoothOff(View view) {
         mBTAdapter.disable(); // Turn off
-        mBluetoothStatus.setText("BLUETOOTH DISABLED");
+        mTextViewBluetoothStatus.setText("BLUETOOTH DISABLED");
         Log.d(TAG, "Bluetooth disabled");
     }
 
-    private void discover(View view) {
+    private void discover() {
         // Check if the device is already discovering
         if (mBTAdapter.isDiscovering()) {
             mBTAdapter.cancelDiscovery();
@@ -496,13 +510,16 @@ public class MainActivity extends Activity {
         }
     };
 
-    private void listPairedDevices(View view) {
+    private void listPairedDevices() {
+
+        //discover();
+
         mPairedDevices = mBTAdapter.getBondedDevices();
         if (mBTAdapter.isEnabled()) {
             mBTArrayAdapter.clear(); // Clear items
             // Put it's one to the adapter
             for (BluetoothDevice device : mPairedDevices) {
-                mBTArrayAdapter.add(device.getName() + "\n" + device.getAddress());
+                mBTArrayAdapter.add(device.getName() + " " + device.getAddress());
             }
         } else {
         }
@@ -514,7 +531,7 @@ public class MainActivity extends Activity {
             String mInfo = ((TextView) v).getText().toString();
             final String mBTAddress = mInfo.substring(mInfo.length() - 17);
             final String mBTName = mInfo.substring(0, mInfo.length() - 17);
-
+            /*
             // Spawn a new thread to avoid blocking the GUI one
             new Thread() {
                 public void run() {
@@ -524,6 +541,11 @@ public class MainActivity extends Activity {
                     mBTSPP2FileService.Connect(mBTAddress);
                 }
             }.start();
+            */
+            if(!isMyServiceRunning(BTSPP2FileService.class)) {
+                startService(new Intent(getBaseContext(), BTSPP2FileService.class));
+            }
+            mBTSPP2FileService.Connect(mBTAddress);
         }
     };
         /*
@@ -707,7 +729,7 @@ public class MainActivity extends Activity {
             mBTSPP2FileService = mLocalBinder.getServerInstance();
             mBTSPP2FileService.mHandler = mHandler;
 
-            mBluetoothStatus.setText(mBTSPP2FileService.BTStatus);
+            mTextViewBluetoothStatus.setText(mBTSPP2FileService.BTStatus);
             //showNotification(mBluetoothSerialBridgeService.BTStatus, null, 0);
 
             /*

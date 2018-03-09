@@ -35,6 +35,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import cz.growmat.btspp2file.R;
 
@@ -43,7 +44,8 @@ public class BTSPP2FileService extends Service {
     final public static String TAG = BTSPP2FileService.class.getName();
 
     public StreamServiceThread streamServiceThread;
-    public boolean streamServiceThreadRun = true;
+    public boolean serviceThreadRun = true;
+    boolean waitForAnswer = false;
 
     private static BluetoothSocket mBTSocket = null; // bi-directional client-to-client data path
     private static BluetoothAdapter mBTAdapter = null;
@@ -58,68 +60,69 @@ public class BTSPP2FileService extends Service {
     private final static int CONNECTING_STATUS = 3; // used in bluetooth handler to identify message status
     public Handler mHandler; // Our main handler that will receive callback notifications
 
+    PowerManager mPowerManager;
+    PowerManager.WakeLock mWakeLock;
 
+    private static boolean mAutoTest = false;
+    private boolean autoTestRunning = false;
 
-    public static boolean autoTest = false;
-    private boolean mAutoTestState = false;
     public void startAutoTest() {
+        if(autoTestRunning)
+            return;
+        autoTestRunning = true;
+
         new Thread() {
             public void run() {
-
-                while(autoTest) {
+                while(autoTestRunning) {
                     SystemClock.sleep(250);
                     //if(mServer != null) {
-                        if (mAutoTestState) {
-                            btSend("d10,1;");
-                            btSend("d9,0;");
-                        } else {
-                            btSend("d10,0;");
-                            btSend("d9,1;");
-                        }
-                        mAutoTestState = !mAutoTestState;
+                    if (mAutoTest) {
+                        btSend("d10,1;");
+                        btSend("d9,0;");
+                    } else {
+                        btSend("d10,0;");
+                        btSend("d9,1;");
+                    }
+                    mAutoTest = !mAutoTest;
                     //}
                 }
             }
         }.start();
     }
 
-    public void Connect(String BTAddress) {
+    public void stopAutoTest() {
+        autoTestRunning = false;
+    }
 
-        showNotification("CONNECTING " + BTAddress, null, 0);
+    public void Connect(String BTAddress) {
+        //showNotification("CONNECTING " + BTAddress, null, 0);
 
         this.BTAddress = BTAddress;
         SharedPreferences mPrefs = getSharedPreferences(Constants.PREFS_NAME, 0);
         SharedPreferences.Editor mEditor = mPrefs.edit();
         mEditor.putString(Constants.PREFS_NAME_BT_ADDRESS, BTAddress).commit();
 
-        btCancel();
-
-        streamServiceThreadRun = true;
-        new Thread() {
-            public void run() {
-                while (streamServiceThreadRun) {
-                    if (btStart())
-                        break;
-                }
-            }
-        }.start();
-        //btStart();
+        Connect();
     }
 
-    public void Reconnect() {
-        BTStatus = "DISCONNECTED " + BTAddress;
+    public void Connect() {
+        BTStatus = "CONNECTING " + BTAddress;
         showNotification(BTStatus, null, Notification.DEFAULT_SOUND);
         if (mHandler != null)
             mHandler.obtainMessage(CONNECTING_STATUS, -1, -1, BTStatus).sendToTarget();
+
         btCancel();
-        new Thread() {
-            public void run() {
-                while (streamServiceThreadRun) {
-                    if (btStart())
-                        break;
+
+        //if (btStarting.compareAndSet(false, true)) {
+            new Thread() {
+                public void run() {
+                    while (serviceThreadRun) {
+                        if (btStart())
+                            break;
+                    }
                 }
-            }
-        }.start();
+            }.start();
+        //}
         return;
     }
 
@@ -127,33 +130,33 @@ public class BTSPP2FileService extends Service {
         return device.createRfcommSocketToServiceRecord(BT_MODULE_UUID);
     }
 
-    final static String fileName2 = "log.txt";
+    PowerManager.WakeLock wl;
 
     @Override
     public void onCreate() {
+        BTStatus = "STARTING UP";
+        showNotification(BTStatus, null, 0);
+        if(mHandler != null)
+            mHandler.obtainMessage(CONNECTING_STATUS, -1, -1, BTStatus ).sendToTarget();
 
-        showNotification("BLUETOOTH SERIAL BRIDGE", null, 0);
-
-        /*
-        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-        PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, "My Tag");
-        wl.acquire();
-        */
-
+        //PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        //PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, "My Tag");
+        mPowerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        mWakeLock = mPowerManager.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, TAG);
+        mWakeLock.acquire();
         //LocalBroadcastManager.getInstance(this).registerReceiver(onNotice, new IntentFilter("Msg"));
 
         mBTAdapter = BluetoothAdapter.getDefaultAdapter();
+
         Log.d(TAG, "Service Created");
     }
 
-    PowerManager.WakeLock wl;
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-
-        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-        PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "My Tag");
-        wl = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "My Tag");
-        wl.acquire();
+        //PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        //PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "My Tag");
+        //wl = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "My Tag");
+        //wl.acquire();
 
         Log.d(TAG, "Service Starting...");
 
@@ -164,76 +167,26 @@ public class BTSPP2FileService extends Service {
 
         SharedPreferences mPrefs = getSharedPreferences(Constants.PREFS_NAME, 0);
         BTAddress = mPrefs.getString(Constants.PREFS_NAME_BT_ADDRESS, null);
+        waitForAnswer = mPrefs.getBoolean(Constants.PREFS_NAME_WAIT_FOR_ANSWER, false);
+
 
         //mBTAdapter = BluetoothAdapter.getDefaultAdapter();
 
         new Thread() {
             public void run() {
-                while (streamServiceThreadRun) {
+                while (serviceThreadRun) {
                     if (btStart())
                         break;
                 }
             }
         }.start();
 
-        new Thread() {
-            // Let it continue running until it is stopped.
-            public void run() {
-                SharedPreferences mPrefs = getSharedPreferences(Constants.PREFS_NAME, 0);
-                String mPath = Environment.getExternalStorageDirectory().getAbsolutePath() + mPrefs.getString(Constants.PREFS_NAME_PATH, Constants.DEFAULT_PATH);
-                String mTxFileName = Constants.DEFAULT_TX_FILENAME;
-                boolean mWaitForAnswer = mPrefs.getBoolean(Constants.PREFS_NAME_WAIT_FOR_ANSWER, false);
-
-                while (streamServiceThreadRun) {
-                    try {
 
 
-                        char[] buffer = new char[1024];  // Buffer store for the stream
-                        int bytes; // Bytes returned from read()
-                        File file = new File(mPath + mTxFileName);
-
-                        if(file.exists()) {
-                            FileInputStream fileInputStream = new FileInputStream(file);
-                            InputStreamReader inputStreamReader = new InputStreamReader(fileInputStream);
-
-
-
-                            while ((bytes = inputStreamReader.read(buffer, 0, 1024)) > -1) {
-                                btSend(String.valueOf(buffer, 0, bytes));
-                                Log.d(TAG, String.valueOf(buffer, 0, bytes));
-                            }
-
-                            inputStreamReader.close();
-                            fileInputStream.close();
-
-                            //TODO: Wait for data
-                            if(mWaitForAnswer) {
-                                SystemClock.sleep(250);
-                            }
-
-                            //while(mWaitForAnswer && !streamServiceThread.isRecieved) {
-                            //    SystemClock.sleep(250);
-                            //}
-                            //Log.i(TAG, String.valueOf(streamServiceThread.isRecieved));
-                            file.delete();
-                        }
-
-                    } catch (FileNotFoundException e) {
-                        Log.d(TAG, e.getMessage());
-                    }  catch(IOException e) {
-                        Log.d(TAG, e.getMessage());
-                    }
-                    catch (Exception e) {
-                        Log.d(TAG, e.getMessage());
-                    }
-                    SystemClock.sleep(100);
-                }
-            }
-        }.start();
-
-        autoTest = mPrefs.getBoolean(Constants.PREFS_NAME_AUTO_TEST, true);
-        if(autoTest)
+        //autoTest = mPrefs.getBoolean(Constants.PREFS_NAME_AUTO_TEST, true);
+        if(mPrefs.getBoolean(Constants.PREFS_NAME_AUTO_TEST, true)) {
             startAutoTest();
+        }
 
         Log.d(TAG, "Service Started");
         return START_STICKY;
@@ -242,7 +195,7 @@ public class BTSPP2FileService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        wl.release();
+        mWakeLock.release();
         btCancel();
         Log.d(TAG, "Service Destroyed");
     }
@@ -277,7 +230,19 @@ public class BTSPP2FileService extends Service {
         return true;
     };
 
+    private AtomicBoolean btStarting = new AtomicBoolean(false);
     public boolean btStart() {
+
+        // TODO: atomic if - set
+        if(btStarting.compareAndSet(false, true)) {
+
+        }
+        else {
+            Log.w(TAG, "Connecting already running.");
+            // Break loop
+            return true;
+        }
+
 
         BTStatus = "CONNECTING " + BTAddress;
         if(mHandler != null)
@@ -291,7 +256,7 @@ public class BTSPP2FileService extends Service {
         }
 
         while (!mBTAdapter.isEnabled()) {
-            //TODO:
+            // TODO:
         }
 
         if (BTAddress == null) {
@@ -302,7 +267,7 @@ public class BTSPP2FileService extends Service {
 
             Log.d(TAG, "BT device is not defined");
 
-            streamServiceThreadRun = false;
+            serviceThreadRun = false;
             return false;
         }
 
@@ -323,6 +288,7 @@ public class BTSPP2FileService extends Service {
             mBTSocket = createBluetoothSocket(mDevice);
         } catch (IOException e) {
             Log.e(TAG, e.toString());
+            btStarting.set(false);
             return false;
         }
         // Establish the Bluetooth socket connection.
@@ -335,8 +301,10 @@ public class BTSPP2FileService extends Service {
                 //    mHandler.obtainMessage(CONNECTING_STATUS, -1, -1).sendToTarget();
             } catch (IOException e2) {
                 Log.e(TAG, e2.toString());
+                btStarting.set(false);
                 return false;
             }
+            btStarting.set(false);
             return false;
         }
 
@@ -348,6 +316,57 @@ public class BTSPP2FileService extends Service {
         if(mHandler != null)
             mHandler.obtainMessage(CONNECTING_STATUS, -1, -1, BTStatus ).sendToTarget();
 
+        new Thread() {
+            SharedPreferences mPrefs = getSharedPreferences(Constants.PREFS_NAME, 0);
+            String mPath = Environment.getExternalStorageDirectory().getAbsolutePath() + mPrefs.getString(Constants.PREFS_NAME_PATH, Constants.DEFAULT_PATH);
+            String mTxFileName = Constants.DEFAULT_TX_FILENAME;
+
+            // Let it continue running until it is stopped.
+            public void run() {
+                while (serviceThreadRun) {
+                    try {
+                        char[] buffer = new char[1024];  // Buffer store for the stream
+                        int bytes; // Bytes returned from read()
+                        File file = new File(mPath + mTxFileName);
+
+                        if(file.exists()) {
+                            FileInputStream fileInputStream = new FileInputStream(file);
+                            InputStreamReader inputStreamReader = new InputStreamReader(fileInputStream);
+
+                            while ((bytes = inputStreamReader.read(buffer, 0, 1024)) > -1) {
+                                btSend(String.valueOf(buffer, 0, bytes));
+                                Log.d(TAG, String.valueOf(buffer, 0, bytes));
+                            }
+
+                            inputStreamReader.close();
+                            fileInputStream.close();
+
+                            //TODO: Wait for data
+                            if(waitForAnswer) {
+                                SystemClock.sleep(250);
+                            }
+
+                            //while(mWaitForAnswer && !streamServiceThread.isRecieved) {
+                            //    SystemClock.sleep(250);
+                            //}
+                            //Log.i(TAG, String.valueOf(streamServiceThread.isRecieved));
+                            file.delete();
+                        }
+
+                    } catch (FileNotFoundException e) {
+                        Log.d(TAG, e.getMessage());
+                    }  catch(IOException e) {
+                        Log.d(TAG, e.getMessage());
+                    }
+                    catch (Exception e) {
+                        Log.d(TAG, e.getMessage());
+                    }
+                    SystemClock.sleep(250);
+                }
+            }
+        }.start();
+
+        btStarting.set(false);
         return true;
     };
 
@@ -382,14 +401,14 @@ public class BTSPP2FileService extends Service {
                     }
                 }.start();
                 */
-                Reconnect();
+                Connect();
                 return;
             }
 
             if(BluetoothAdapter.ACTION_STATE_CHANGED.equals(intent.getAction())) {
                 if(intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1) == BluetoothAdapter.STATE_OFF) {
                     // Bluetooth was disconnected
-                    Reconnect();
+                    Connect();
                     return;
                 }
             }
