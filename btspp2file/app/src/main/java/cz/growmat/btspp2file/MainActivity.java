@@ -620,7 +620,7 @@ public class MainActivity extends Activity {
             final String mBTName = mInfo.substring(0, mInfo.length() - 17);
 
             AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext());
-            builder.setTitle("REMOVE " + mBTName.substring(0, 1) + ": " + mBTAddress + "?");
+            builder.setTitle("REMOVE " + mBTName.substring(0, 1) + ": " + mBTAddress + " ?");
             // Set up the input
             //builder.setIcon(android.R.drawable.ic_dialog_alert);
             // Set up the buttons
@@ -891,7 +891,8 @@ public class MainActivity extends Activity {
             mBTSPP2FileService = mLocalBinder.getServerInstance();
             mBTSPP2FileService.mHandler = mHandler;
 
-            mTextViewBluetoothStatus.setText(mBTSPP2FileService.BTStatus);
+            mTextViewBluetoothStatus.setText(mBTSPP2FileService.getBTStatusString());
+            //mTextViewBluetoothStatus.setText(mBTSPP2FileService.BTStatus);
             //showNotification(mBluetoothSerialBridgeService.BTStatus, null, 0);
 
             /*

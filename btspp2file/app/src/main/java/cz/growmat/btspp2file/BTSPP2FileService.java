@@ -52,7 +52,8 @@ public class BTSPP2FileService extends Service {
     private static final UUID BT_MODULE_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); // "random" unique identifier
 
     public static String[] BTAddress = {null, null, null, null, null, null, null};
-    public String BTStatus;
+    //public String BTStatus;
+    String[] BTStatus = {null, null, null, null, null, null, null};
 
     // Defines for identifying shared types between calling functions
     private final static int REQUEST_ENABLE_BT = 1; // used to identify adding bluetooth names
@@ -67,6 +68,8 @@ public class BTSPP2FileService extends Service {
     private boolean autoTestRunning = false;
 
     private AtomicBoolean[] btStarting = {null, null, null, null, null, null, null};
+
+
 
     public void startAutoTest() {
         if(autoTestRunning)
@@ -99,7 +102,7 @@ public class BTSPP2FileService extends Service {
     }
 
     public void Connect(int index, String BTAddress) {
-        //showNotification("CONNECTING " + BTAddress, null, 0);
+        //showNotification("CONNECTING " + String.valueOf(index) + ": " + BTAddress, null, 0);
 
         this.BTAddress[index] = BTAddress;
         SharedPreferences mPrefs = getSharedPreferences(Constants.PREFS_NAME, 0);
@@ -124,10 +127,10 @@ public class BTSPP2FileService extends Service {
     }
 
     public void Disconnect(final int index) {
-        BTStatus = "DISCONNECTED " + BTAddress[index];
-        showNotification(BTStatus, null, Notification.DEFAULT_SOUND);
+        BTStatus[index] = null; //"DISCONNECTED " + String.valueOf(index) + ": " + BTAddress[index];
+        showNotification("DISCONNECTED " + String.valueOf(index) + ": " + BTAddress[index], null, 0);
         if (mHandler != null)
-            mHandler.obtainMessage(CONNECTING_STATUS, -1, -1, BTStatus).sendToTarget();
+            mHandler.obtainMessage(CONNECTING_STATUS, -1, -1, getBTStatusString()).sendToTarget();
 
         SharedPreferences mPrefs = getSharedPreferences(Constants.PREFS_NAME, 0);
         SharedPreferences.Editor mEditor = mPrefs.edit();
@@ -153,10 +156,10 @@ public class BTSPP2FileService extends Service {
     }
 
     public void Connect(final int index) {
-        BTStatus = "CONNECTING " + String.valueOf(index) + ": " + BTAddress[index];
-        showNotification(BTStatus, null, Notification.DEFAULT_SOUND);
+        BTStatus[index] = "CONNECTING " + String.valueOf(index) + ": " + BTAddress[index];
+        showNotification(BTStatus[index], null, 0);
         if (mHandler != null)
-            mHandler.obtainMessage(CONNECTING_STATUS, -1, -1, BTStatus).sendToTarget();
+            mHandler.obtainMessage(CONNECTING_STATUS, -1, -1, getBTStatusString()).sendToTarget();
 
         if(BTAddress[index] != null) {
             btCancel(index);
@@ -182,10 +185,10 @@ public class BTSPP2FileService extends Service {
 
     @Override
     public void onCreate() {
-        BTStatus = "STARTING UP";
-        showNotification(BTStatus, null, 0);
-        if(mHandler != null)
-            mHandler.obtainMessage(CONNECTING_STATUS, -1, -1, BTStatus ).sendToTarget();
+        //BTStatus = "STARTING UP";
+        showNotification("STARTING UP", null, 0);
+        //if(mHandler != null)
+        //    mHandler.obtainMessage(CONNECTING_STATUS, -1, -1, BTStatus ).sendToTarget();
 
         //PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         //PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, "My Tag");
@@ -313,9 +316,9 @@ public class BTSPP2FileService extends Service {
         }
 
 
-        BTStatus = "CONNECTING " + String.valueOf(index) + ": " + BTAddress[index];
+        BTStatus[index] = "CONNECTING " + String.valueOf(index) + ": " + BTAddress[index];
         if(mHandler != null)
-            mHandler.obtainMessage(CONNECTING_STATUS, -1, -1, BTStatus ).sendToTarget();
+            mHandler.obtainMessage(CONNECTING_STATUS, -1, -1, getBTStatusString() ).sendToTarget();
 
         // Restart streamServiceThread
         btCancel(index);
@@ -329,10 +332,10 @@ public class BTSPP2FileService extends Service {
         }
 
         if (BTAddress[index] == null) {
-            BTStatus = "SELECT BT DEVICE FIRST";
-            showNotification(BTStatus, null, 0);
-            if(mHandler != null)
-                mHandler.obtainMessage(CONNECTING_STATUS, -1, -1, BTStatus ).sendToTarget();
+            //BTStatus = "SELECT BT DEVICE FIRST";
+            //showNotification(BTStatus, null, 0);
+            //if(mHandler != null)
+            //    mHandler.obtainMessage(CONNECTING_STATUS, -1, -1, BTStatus ).sendToTarget();
 
             btStarting[index].set(false);
             serviceThreadRun[index] = false;
@@ -384,10 +387,10 @@ public class BTSPP2FileService extends Service {
         streamServiceThread[index] = new StreamServiceThread(index, mBTSocket[index]);
         streamServiceThread[index].start();
 
-        BTStatus = "CONNECTED " + String.valueOf(index) + ": " + BTAddress[index];
-        showNotification(BTStatus, null, 0);
+        BTStatus[index] = "CONNECTED " + String.valueOf(index) + ": " + BTAddress[index];
+        showNotification(BTStatus[index], null, 0);
         if(mHandler != null)
-            mHandler.obtainMessage(CONNECTING_STATUS, -1, -1, BTStatus ).sendToTarget();
+            mHandler.obtainMessage(CONNECTING_STATUS, -1, -1, getBTStatusString() ).sendToTarget();
 
         new Thread() {
             SharedPreferences mPrefs = getSharedPreferences(Constants.PREFS_NAME, 0);
@@ -458,7 +461,7 @@ public class BTSPP2FileService extends Service {
 
                 // TODO:
                 //BTStatus = "CONNECTED";
-                Log.i(TAG, BTStatus);
+                Log.i(TAG, getBTStatusString());
 
                 //showNotification(BTStatus, null, 0);
                 //if(mHandler != null)
@@ -574,6 +577,19 @@ public class BTSPP2FileService extends Service {
         }
     };
 
+    public String getBTStatusString() {
+        String message = "";
+        for (int i = 0; i < 7; i++) {
+            if (BTStatus[i] != null) {
+                if(message !=  "") {
+                    message += "\n";
+                }
+                message += BTStatus[i];
+            }
+        }
+        return message;
+    };
+
     public void showNotification(String title, String message, int defaults) {
 
         //NotificationManager notificationManager;
@@ -588,6 +604,8 @@ public class BTSPP2FileService extends Service {
         //PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
         Intent notificationIntent = new Intent(this, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+
 
         mNotification.setLatestEventInfo(this, title, message, pendingIntent);
         mNotificationManager.notify(1, mNotification);
