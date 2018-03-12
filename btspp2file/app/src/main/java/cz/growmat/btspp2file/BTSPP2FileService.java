@@ -43,15 +43,15 @@ public class BTSPP2FileService extends Service {
 
     final public static String TAG = BTSPP2FileService.class.getName();
 
-    public StreamServiceThread streamServiceThread;
-    public boolean serviceThreadRun = true;
+    public StreamServiceThread[] streamServiceThread = {null, null, null, null, null, null, null};
+    public boolean[] serviceThreadRun = {true, true, true, true, true, true, true};
     boolean waitForAnswer = false;
 
-    private static BluetoothSocket mBTSocket = null; // bi-directional client-to-client data path
+    private static BluetoothSocket[] mBTSocket = {null, null, null, null, null, null, null}; // bi-directional client-to-client data path
     private static BluetoothAdapter mBTAdapter = null;
     private static final UUID BT_MODULE_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); // "random" unique identifier
 
-    public static String BTAddress;
+    public static String[] BTAddress = {null, null, null, null, null, null, null};
     public String BTStatus;
 
     // Defines for identifying shared types between calling functions
@@ -66,6 +66,8 @@ public class BTSPP2FileService extends Service {
     private static boolean mAutoTest = false;
     private boolean autoTestRunning = false;
 
+    private AtomicBoolean[] btStarting = {null, null, null, null, null, null, null};
+
     public void startAutoTest() {
         if(autoTestRunning)
             return;
@@ -76,12 +78,14 @@ public class BTSPP2FileService extends Service {
                 while(autoTestRunning) {
                     SystemClock.sleep(250);
                     //if(mServer != null) {
-                    if (mAutoTest) {
-                        btSend("d10,1;");
-                        btSend("d9,0;");
-                    } else {
-                        btSend("d10,0;");
-                        btSend("d9,1;");
+                    for(int i = 0 ; i < 7; i++) {
+                        if (mAutoTest) {
+                            btSend(i, "d10,1;");
+                            btSend(i, "d9,0;");
+                        } else {
+                            btSend(i, "d10,0;");
+                            btSend(i, "d9,1;");
+                        }
                     }
                     mAutoTest = !mAutoTest;
                     //}
@@ -94,35 +98,79 @@ public class BTSPP2FileService extends Service {
         autoTestRunning = false;
     }
 
-    public void Connect(String BTAddress) {
+    public void Connect(int index, String BTAddress) {
         //showNotification("CONNECTING " + BTAddress, null, 0);
 
-        this.BTAddress = BTAddress;
+        this.BTAddress[index] = BTAddress;
         SharedPreferences mPrefs = getSharedPreferences(Constants.PREFS_NAME, 0);
         SharedPreferences.Editor mEditor = mPrefs.edit();
-        mEditor.putString(Constants.PREFS_NAME_BT_ADDRESS, BTAddress).commit();
+        if(index == 0)
+            mEditor.putString(Constants.PREFS_NAME_BT_ADDRESS_0, BTAddress).commit();
+        if(index == 1)
+            mEditor.putString(Constants.PREFS_NAME_BT_ADDRESS_1, BTAddress).commit();
+        if(index == 2)
+            mEditor.putString(Constants.PREFS_NAME_BT_ADDRESS_2, BTAddress).commit();
+        if(index == 3)
+            mEditor.putString(Constants.PREFS_NAME_BT_ADDRESS_3, BTAddress).commit();
+        if(index == 4)
+            mEditor.putString(Constants.PREFS_NAME_BT_ADDRESS_4, BTAddress).commit();
+        if(index == 5)
+            mEditor.putString(Constants.PREFS_NAME_BT_ADDRESS_5, BTAddress).commit();
+        if(index == 6)
+            mEditor.putString(Constants.PREFS_NAME_BT_ADDRESS_6, BTAddress).commit();
 
-        Connect();
+        serviceThreadRun[index] = true;
+        Connect(index);
     }
 
-    public void Connect() {
-        BTStatus = "CONNECTING " + BTAddress;
+    public void Disconnect(final int index) {
+        BTStatus = "DISCONNECTED " + BTAddress[index];
         showNotification(BTStatus, null, Notification.DEFAULT_SOUND);
         if (mHandler != null)
             mHandler.obtainMessage(CONNECTING_STATUS, -1, -1, BTStatus).sendToTarget();
 
-        btCancel();
+        SharedPreferences mPrefs = getSharedPreferences(Constants.PREFS_NAME, 0);
+        SharedPreferences.Editor mEditor = mPrefs.edit();
+        if(index == 0)
+            mEditor.putString(Constants.PREFS_NAME_BT_ADDRESS_0, null).commit();
+        if(index == 1)
+            mEditor.putString(Constants.PREFS_NAME_BT_ADDRESS_1, null).commit();
+        if(index == 2)
+            mEditor.putString(Constants.PREFS_NAME_BT_ADDRESS_2, null).commit();
+        if(index == 3)
+            mEditor.putString(Constants.PREFS_NAME_BT_ADDRESS_3, null).commit();
+        if(index == 4)
+            mEditor.putString(Constants.PREFS_NAME_BT_ADDRESS_4, null).commit();
+        if(index == 5)
+            mEditor.putString(Constants.PREFS_NAME_BT_ADDRESS_5, null).commit();
+        if(index == 6)
+            mEditor.putString(Constants.PREFS_NAME_BT_ADDRESS_6, null).commit();
 
-        //if (btStarting.compareAndSet(false, true)) {
+        BTAddress[index] = null;
+
+        serviceThreadRun[index] = false;
+        btCancel(index);
+    }
+
+    public void Connect(final int index) {
+        BTStatus = "CONNECTING " + String.valueOf(index) + ": " + BTAddress[index];
+        showNotification(BTStatus, null, Notification.DEFAULT_SOUND);
+        if (mHandler != null)
+            mHandler.obtainMessage(CONNECTING_STATUS, -1, -1, BTStatus).sendToTarget();
+
+        if(BTAddress[index] != null) {
+            btCancel(index);
+            //if (btStarting.compareAndSet(false, true)) {
             new Thread() {
                 public void run() {
-                    while (serviceThreadRun) {
-                        if (btStart())
+                    while (serviceThreadRun[index]) {
+                        if (btStart(index))
                             break;
                     }
                 }
             }.start();
-        //}
+            //}
+        }
         return;
     }
 
@@ -148,6 +196,10 @@ public class BTSPP2FileService extends Service {
 
         mBTAdapter = BluetoothAdapter.getDefaultAdapter();
 
+        for(int i = 0; i < 7; i++) {
+            btStarting[i] = new AtomicBoolean(false);
+        }
+
         Log.d(TAG, "Service Created");
     }
 
@@ -163,27 +215,37 @@ public class BTSPP2FileService extends Service {
         Time now = new Time();
         now.setToNow();
         String s = now.toString() + '\n';
-        Utils.saveToFile(Constants.DEFAULT_PATH, Constants.DEFAULT_LOG_FILENAME, s.getBytes(), s.getBytes().length);
+        Utils.saveToFile(-1, Constants.DEFAULT_PATH, Constants.DEFAULT_LOG_FILENAME, s.getBytes(), s.getBytes().length);
 
         SharedPreferences mPrefs = getSharedPreferences(Constants.PREFS_NAME, 0);
-        BTAddress = mPrefs.getString(Constants.PREFS_NAME_BT_ADDRESS, null);
+        BTAddress[0] = mPrefs.getString(Constants.PREFS_NAME_BT_ADDRESS_0, null);
+        BTAddress[1] = mPrefs.getString(Constants.PREFS_NAME_BT_ADDRESS_1, null);
+        BTAddress[2] = mPrefs.getString(Constants.PREFS_NAME_BT_ADDRESS_2, null);
+        BTAddress[3] = mPrefs.getString(Constants.PREFS_NAME_BT_ADDRESS_3, null);
+        BTAddress[4] = mPrefs.getString(Constants.PREFS_NAME_BT_ADDRESS_4, null);
+        BTAddress[5] = mPrefs.getString(Constants.PREFS_NAME_BT_ADDRESS_5, null);
+        BTAddress[6] = mPrefs.getString(Constants.PREFS_NAME_BT_ADDRESS_6, null);
+
         waitForAnswer = mPrefs.getBoolean(Constants.PREFS_NAME_WAIT_FOR_ANSWER, false);
 
 
         //mBTAdapter = BluetoothAdapter.getDefaultAdapter();
 
-        new Thread() {
-            public void run() {
-                while (serviceThreadRun) {
-                    if (btStart())
-                        break;
-                }
+        for(int i = 0; i < 7; i++) {
+            if(BTAddress[i] != null) {
+                final int i2 = i;
+                new Thread() {
+                    public void run() {
+                        while (serviceThreadRun[i2]) {
+                            if (btStart(i2))
+                                break;
+                        }
+                    }
+                }.start();
             }
-        }.start();
+        }
 
-
-
-        //autoTest = mPrefs.getBoolean(Constants.PREFS_NAME_AUTO_TEST, true);
+       //autoTest = mPrefs.getBoolean(Constants.PREFS_NAME_AUTO_TEST, true);
         if(mPrefs.getBoolean(Constants.PREFS_NAME_AUTO_TEST, true)) {
             startAutoTest();
         }
@@ -196,7 +258,9 @@ public class BTSPP2FileService extends Service {
     public void onDestroy() {
         super.onDestroy();
         mWakeLock.release();
-        btCancel();
+        for(int i = 0; i < 7; i++) {
+            btCancel(i);
+        }
         Log.d(TAG, "Service Destroyed");
     }
 
@@ -216,12 +280,12 @@ public class BTSPP2FileService extends Service {
 
     // Bluetooth
 
-    public boolean btCancel(){
-        if(streamServiceThread != null) {
-            streamServiceThread.cancel();
-            streamServiceThread = null;
-            try{
-                mBTSocket.close();
+    public boolean btCancel(int index){
+        if (streamServiceThread[index] != null) {
+            streamServiceThread[index].cancel();
+            streamServiceThread[index] = null;
+            try {
+                mBTSocket[index].close();
             } catch (IOException e) {
                 Log.d(TAG, e.toString());
                 return false;
@@ -230,26 +294,31 @@ public class BTSPP2FileService extends Service {
         return true;
     };
 
-    private AtomicBoolean btStarting = new AtomicBoolean(false);
-    public boolean btStart() {
 
-        // TODO: atomic if - set
-        if(btStarting.compareAndSet(false, true)) {
+    //BluetoothDevice[] mDevice = {null, null};
+
+    public boolean btStart(final int index) {
+        //btStarting[0].set(false);
+        //btStarting[1].set(false);
+
+
+        Log.i(TAG, String.valueOf(index) + " " + BTAddress[index] + " btStarting...");
+        if(btStarting[index].compareAndSet(false, true)) {
 
         }
         else {
-            Log.w(TAG, "Connecting already running.");
+            Log.w(TAG, String.valueOf(index) + " Connecting already running.");
             // Break loop
             return true;
         }
 
 
-        BTStatus = "CONNECTING " + BTAddress;
+        BTStatus = "CONNECTING " + String.valueOf(index) + ": " + BTAddress[index];
         if(mHandler != null)
             mHandler.obtainMessage(CONNECTING_STATUS, -1, -1, BTStatus ).sendToTarget();
 
         // Restart streamServiceThread
-        btCancel();
+        btCancel(index);
 
         if(!mBTAdapter.isEnabled()) {
             mBTAdapter.enable();
@@ -259,19 +328,21 @@ public class BTSPP2FileService extends Service {
             // TODO:
         }
 
-        if (BTAddress == null) {
+        if (BTAddress[index] == null) {
             BTStatus = "SELECT BT DEVICE FIRST";
             showNotification(BTStatus, null, 0);
             if(mHandler != null)
                 mHandler.obtainMessage(CONNECTING_STATUS, -1, -1, BTStatus ).sendToTarget();
 
-            Log.d(TAG, "BT device is not defined");
-
-            serviceThreadRun = false;
+            btStarting[index].set(false);
+            serviceThreadRun[index] = false;
+            Log.i(TAG, String.valueOf(index) + " BT device is not defined");
             return false;
         }
 
-        BluetoothDevice mDevice = mBTAdapter.getRemoteDevice(BTAddress);
+        BluetoothDevice mDevice = mBTAdapter.getRemoteDevice(BTAddress[index]);
+        Log.i(TAG, String.valueOf(index) + " " + mDevice.toString());
+        //mDevice[index] = mBTAdapter.getRemoteDevice(BTAddress[index]);
 
         getApplicationContext().registerReceiver(ActionFoundReceiver,
                 new IntentFilter(BluetoothDevice.ACTION_ACL_CONNECTED));
@@ -281,37 +352,39 @@ public class BTSPP2FileService extends Service {
                 new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED));
 
         try {
-            if (mBTSocket != null)  {
-                mBTSocket.close();
+            if (mBTSocket[index] != null)  {
+                mBTSocket[index].close();
                 SystemClock.sleep(500);
             }
-            mBTSocket = createBluetoothSocket(mDevice);
+            mBTSocket[index] = createBluetoothSocket(mDevice);
         } catch (IOException e) {
-            Log.e(TAG, e.toString());
-            btStarting.set(false);
+            Log.e(TAG, String.valueOf(index) + " " + e.toString());
+            btStarting[index].set(false);
             return false;
         }
         // Establish the Bluetooth socket connection.
         try {
-            mBTSocket.connect();
+            mBTSocket[index].connect();
         } catch (IOException e) {
             try {
-                mBTSocket.close();
+                mBTSocket[index].close();
                 //if(mHandler != null)
                 //    mHandler.obtainMessage(CONNECTING_STATUS, -1, -1).sendToTarget();
             } catch (IOException e2) {
-                Log.e(TAG, e2.toString());
-                btStarting.set(false);
+                Log.e(TAG, String.valueOf(index) + " " + e2.toString());
+                btStarting[index].set(false);
                 return false;
             }
-            btStarting.set(false);
+            Log.e(TAG, String.valueOf(index) + " " + e.toString());
+            btStarting[index].set(false);
             return false;
         }
 
-        streamServiceThread = new StreamServiceThread(mBTSocket);
-        streamServiceThread.start();
 
-        BTStatus = "CONNECTED " + BTAddress;
+        streamServiceThread[index] = new StreamServiceThread(index, mBTSocket[index]);
+        streamServiceThread[index].start();
+
+        BTStatus = "CONNECTED " + String.valueOf(index) + ": " + BTAddress[index];
         showNotification(BTStatus, null, 0);
         if(mHandler != null)
             mHandler.obtainMessage(CONNECTING_STATUS, -1, -1, BTStatus ).sendToTarget();
@@ -323,18 +396,18 @@ public class BTSPP2FileService extends Service {
 
             // Let it continue running until it is stopped.
             public void run() {
-                while (serviceThreadRun) {
+                while (serviceThreadRun[index]) {
                     try {
                         char[] buffer = new char[1024];  // Buffer store for the stream
                         int bytes; // Bytes returned from read()
-                        File file = new File(mPath + mTxFileName);
+                        File file = new File(mPath + String.valueOf(index), mTxFileName);
 
                         if(file.exists()) {
                             FileInputStream fileInputStream = new FileInputStream(file);
                             InputStreamReader inputStreamReader = new InputStreamReader(fileInputStream);
 
                             while ((bytes = inputStreamReader.read(buffer, 0, 1024)) > -1) {
-                                btSend(String.valueOf(buffer, 0, bytes));
+                                btSend(index, String.valueOf(buffer, 0, bytes));
                                 Log.d(TAG, String.valueOf(buffer, 0, bytes));
                             }
 
@@ -354,19 +427,20 @@ public class BTSPP2FileService extends Service {
                         }
 
                     } catch (FileNotFoundException e) {
-                        Log.d(TAG, e.getMessage());
+                        Log.d(TAG, String.valueOf(index) + e.getMessage());
                     }  catch(IOException e) {
-                        Log.d(TAG, e.getMessage());
+                        Log.d(TAG, String.valueOf(index) + e.getMessage());
                     }
                     catch (Exception e) {
-                        Log.d(TAG, e.getMessage());
+                        Log.d(TAG, String.valueOf(index) + e.getMessage());
                     }
                     SystemClock.sleep(250);
                 }
             }
         }.start();
 
-        btStarting.set(false);
+        Log.i(TAG, String.valueOf(index) + " btStarted");
+        btStarting[index].set(false);
         return true;
     };
 
@@ -375,14 +449,20 @@ public class BTSPP2FileService extends Service {
         @Override
         public void onReceive(Context context, Intent intent) {
             String mAction = intent.getAction();
+
+            // TODO:
+            //Log.i(TAG, String.valueOf(index) + " " +context.toString());
+            Log.i(TAG, intent.toString());
+
             if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(mAction)) {
 
-                BTStatus = "CONNECTED " + BTAddress;
+                // TODO:
+                //BTStatus = "CONNECTED";
                 Log.i(TAG, BTStatus);
 
-                showNotification(BTStatus, null, 0);
-                if(mHandler != null)
-                    mHandler.obtainMessage(CONNECTING_STATUS, -1, -1, BTStatus ).sendToTarget();
+                //showNotification(BTStatus, null, 0);
+                //if(mHandler != null)
+                //    mHandler.obtainMessage(CONNECTING_STATUS, -1, -1, BTStatus ).sendToTarget();
                 return;
             }
             if (BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(mAction)) {
@@ -401,14 +481,28 @@ public class BTSPP2FileService extends Service {
                     }
                 }.start();
                 */
-                Connect();
+
+                // TODO:
+                for(int i = 0 ; i < 7; i++){
+                    if(streamServiceThread[i] == null || !streamServiceThread[i].isAlive()) {
+                        if(BTAddress[i] != null) {
+                            Connect(i);
+                        }
+                    }
+                }
                 return;
             }
 
             if(BluetoothAdapter.ACTION_STATE_CHANGED.equals(intent.getAction())) {
                 if(intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1) == BluetoothAdapter.STATE_OFF) {
                     // Bluetooth was disconnected
-                    Connect();
+
+                    // TODO:
+                    for(int i = 0; i < 7; i++) {
+                        if(BTAddress[i] != null) {
+                            Connect(i);
+                        }
+                    }
                     return;
                 }
             }
@@ -419,10 +513,10 @@ public class BTSPP2FileService extends Service {
         }
     };
 
-    public boolean btSend(String data){
-        if(streamServiceThread != null) {
-            if(streamServiceThread.isAlive())  {
-                streamServiceThread.write(data);
+    public boolean btSend(int index, String data){
+        if (streamServiceThread[index] != null) {
+            if (streamServiceThread[index].isAlive()) {
+                streamServiceThread[index].write(data);
                 return true;
             }
         }
@@ -507,11 +601,13 @@ class StreamServiceThread extends Thread {
     public final BluetoothSocket socket;
     private final InputStream mInStream;
     private final OutputStream mOutStream;
+    int index = -1;
 
     static boolean b0;
 
-    public StreamServiceThread(BluetoothSocket socket) {
+    public StreamServiceThread(int index, BluetoothSocket socket) {
         this.socket = socket;
+        this.index = index;
         InputStream tmpIn = null;
         OutputStream tmpOut = null;
         // Get the input and output streams, using temp objects because member streams are final
@@ -540,7 +636,7 @@ class StreamServiceThread extends Thread {
                 bytes = mInStream.read(buffer);
 
                 //TODO: listener
-                Utils.saveToFile(mPath, mTxFileName, buffer, bytes);
+                Utils.saveToFile(index, mPath, mTxFileName, buffer, bytes);
 
             } catch (IOException e) {
                 Log.d(TAG, e.toString());

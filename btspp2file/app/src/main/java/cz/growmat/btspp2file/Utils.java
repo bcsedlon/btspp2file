@@ -16,11 +16,18 @@ public class Utils {
 
     final public static String TAG = Utils.class.getName();
 
-    public static boolean saveToFile(String path, String fileName, byte[] data, int length){
+    public static boolean saveToFile(int index, String path, String fileName, byte[] data, int length){
         path = Environment.getExternalStorageDirectory().getAbsolutePath() + path;
         try {
             new File(path).mkdir();
-            File file = new File(path + fileName);
+            new File(path, String.valueOf(index)).mkdir();
+            File file;
+            if(index < 0) {
+                file = new File(path, fileName);
+            }
+            else {
+                file = new File(path + String.valueOf(index), fileName);
+            }
             if (!file.exists()) {
                 file.createNewFile();
             }

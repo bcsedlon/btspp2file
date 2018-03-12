@@ -2,6 +2,7 @@ package cz.growmat.btspp2file;
 
 import android.app.Activity;
 import android.app.ActivityManager;
+import android.app.AlertDialog;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.bluetooth.BluetoothAdapter;
@@ -10,6 +11,7 @@ import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
@@ -23,18 +25,24 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Vibrator;
 //import android.support.v4.content.LocalBroadcastManager;
+import android.text.InputType;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Set;
 
@@ -55,7 +63,7 @@ public class MainActivity extends Activity {
     boolean mBTSPP2FileServiceBounded;
     BTSPP2FileService mBTSPP2FileService;
 
-    ListView list;
+    //ListView list;
     //CustomListAdapter adapter;
     BaseAdapter adapter;
     //ArrayList<ColorSpace.Model> modelList;
@@ -76,7 +84,11 @@ public class MainActivity extends Activity {
     //private Button mDiscoverBtn;
     private BluetoothAdapter mBTAdapter;
     private Set<BluetoothDevice> mPairedDevices;
-    private ArrayAdapter<String> mBTArrayAdapter;
+    private ArrayAdapter<String> mPairedDevicesArrayAdapter;
+    private ListView mPairedDevicesListView;
+
+    private Set<BluetoothDevice> mDevices;
+    private ArrayAdapter<String> mDevicesArrayAdapter;
     private ListView mDevicesListView;
 
 
@@ -99,6 +111,30 @@ public class MainActivity extends Activity {
             }
         }
         return false;
+    }
+
+    /**** Method for Setting the Height of the ListView dynamically.
+     **** Hack to fix the issue of not showing all the items of the ListView
+     **** when placed inside a ScrollView  ****/
+    public static void setListViewHeightBasedOnChildren(ListView listView) {
+        ListAdapter listAdapter = listView.getAdapter();
+        if (listAdapter == null)
+            return;
+
+        int desiredWidth = View.MeasureSpec.makeMeasureSpec(listView.getWidth(), View.MeasureSpec.UNSPECIFIED);
+        int totalHeight = 0;
+        View view = null;
+        for (int i = 0; i < listAdapter.getCount(); i++) {
+            view = listAdapter.getView(i, view, listView);
+            if (i == 0)
+                view.setLayoutParams(new ViewGroup.LayoutParams(desiredWidth, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+            view.measure(desiredWidth, View.MeasureSpec.UNSPECIFIED);
+            totalHeight += view.getMeasuredHeight();
+        }
+        ViewGroup.LayoutParams params = listView.getLayoutParams();
+        params.height = Math.max(totalHeight + (listView.getDividerHeight() * (listAdapter.getCount() - 1)), 100);
+        listView.setLayoutParams(params);
     }
 
     @Override
@@ -148,13 +184,28 @@ public class MainActivity extends Activity {
         //mCancelBtn = (Button) findViewById(R.id.buttonCancel);
         //mButtonOpenFolder = (Button) findViewById(R.id.buttonOpenFolder);
 
-        mBTArrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1);
+
         mBTAdapter = BluetoothAdapter.getDefaultAdapter(); // get a handle on the bluetooth radio
 
+        mPairedDevicesArrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1);
+        mPairedDevicesListView = (ListView) findViewById(R.id.pairedDevicesListView);
+        mPairedDevicesListView.setAdapter(mPairedDevicesArrayAdapter); // assign model to view
+        mPairedDevicesListView.setOnItemClickListener(mPairedDeviceClickListener);
+        /*
+        mPairedDevicesListView.setOnTouchListener(new View.OnTouchListener() {
+            // Setting on Touch Listener for handling the touch inside ScrollView
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                // Disallow the touch request for parent scroll on touch of child view
+                v.getParent().requestDisallowInterceptTouchEvent(true);
+                return false;
+            }
+        });
+        */
+        mDevicesArrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1);
         mDevicesListView = (ListView) findViewById(R.id.devicesListView);
-        mDevicesListView.setAdapter(mBTArrayAdapter); // assign model to view
+        mDevicesListView.setAdapter(mDevicesArrayAdapter); // assign model to view
         mDevicesListView.setOnItemClickListener(mDeviceClickListener);
-
 
         mAlarmManagerBroadcastReceiver = new AlarmManagerBroadcastReceiver();
         mDeviceBootReceiver = new DeviceBootReceiver();
@@ -183,7 +234,7 @@ public class MainActivity extends Activity {
             }
         };
 
-        if (mBTArrayAdapter == null) {
+        if (mPairedDevicesArrayAdapter == null) {
             // Device does not support Bluetooth
             mTextViewBluetoothStatus.setText("BLUETOOTH NOT FOUND");
             Log.d(TAG, "Bluetooth device not found");
@@ -257,7 +308,8 @@ public class MainActivity extends Activity {
             });*/
         }
 
-        listPairedDevices();
+        //listDevices();
+        //listPairedDevices();
     }
 
 
@@ -268,8 +320,10 @@ public class MainActivity extends Activity {
             case R.id.buttonCancel: {
                 NotificationManager notificationManager = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
                 notificationManager.cancelAll();
-                mBTSPP2FileService.serviceThreadRun = false;
-                mBTSPP2FileService.btCancel();
+                for(int i = 0; i < 2; i++) {
+                    mBTSPP2FileService.serviceThreadRun[i] = false;
+                    mBTSPP2FileService.btCancel(i);
+                }
                 unbindService(mConnection);
                 stopService(new Intent(getBaseContext(), BTSPP2FileService.class));
                 System.exit(0);
@@ -372,9 +426,12 @@ public class MainActivity extends Activity {
         else
             tButtonWaitForAnswer.setChecked(false);
 
-        mTextViewInfoText.setText(" PATH: " + Environment.getExternalStorageDirectory().getAbsolutePath() + mPrefs.getString(Constants.PREFS_NAME_PATH, Constants.DEFAULT_PATH) +
-                "\n RX FILE: " + Constants.DEFAULT_RX_FILENAME +
-                "\n TX FILE: " + Constants.DEFAULT_TX_FILENAME);
+        mTextViewInfoText.setText(Environment.getExternalStorageDirectory().getAbsolutePath() + mPrefs.getString(Constants.PREFS_NAME_PATH, Constants.DEFAULT_PATH));// +
+                //"\n RX FILE: " + Constants.DEFAULT_RX_FILENAME +
+                //"\n TX FILE: " + Constants.DEFAULT_TX_FILENAME);
+
+        listDevices();
+        listPairedDevices();
     }
 
     @Override
@@ -488,7 +545,7 @@ public class MainActivity extends Activity {
             Log.d(TAG, "Discovery stopped");
         } else {
             if (mBTAdapter.isEnabled()) {
-                mBTArrayAdapter.clear(); // Clear items
+                mPairedDevicesArrayAdapter.clear(); // Clear items
                 mBTAdapter.startDiscovery();
                 Log.d(TAG, "Discovery started");
                 registerReceiver(blReceiver, new IntentFilter(BluetoothDevice.ACTION_FOUND));
@@ -505,8 +562,8 @@ public class MainActivity extends Activity {
             if (BluetoothDevice.ACTION_FOUND.equals(action)) {
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 // Add the name to the list
-                mBTArrayAdapter.add(device.getName() + " " + device.getAddress());
-                mBTArrayAdapter.notifyDataSetChanged();
+                mPairedDevicesArrayAdapter.add(device.getName() + " " + device.getAddress());
+                mPairedDevicesArrayAdapter.notifyDataSetChanged();
             }
         }
     };
@@ -514,41 +571,143 @@ public class MainActivity extends Activity {
     private void listPairedDevices() {
 
         //discover();
-
+        mPairedDevicesArrayAdapter.clear();
         mPairedDevices = mBTAdapter.getBondedDevices();
         if (mBTAdapter.isEnabled()) {
-            mBTArrayAdapter.clear(); // Clear items
+            mPairedDevicesArrayAdapter.clear(); // Clear items
             // Put it's one to the adapter
             for (BluetoothDevice device : mPairedDevices) {
-                mBTArrayAdapter.add(device.getName() + " " + device.getAddress());
-
+                mPairedDevicesArrayAdapter.add(device.getName() + " " + device.getAddress());
             }
         } else {
         }
-        mBTArrayAdapter.notifyDataSetChanged();
+        mPairedDevicesArrayAdapter.notifyDataSetChanged();
+        setListViewHeightBasedOnChildren(mPairedDevicesListView);
+    }
+
+    private void listDevices() {
+        mDevicesArrayAdapter.clear();
+        for (int i = 0; i < 7; i++) {
+            String mStr = null;
+            if(i == 0)
+                mStr = mPrefs.getString(Constants.PREFS_NAME_BT_ADDRESS_0, null);
+            if(i == 1)
+                mStr = mPrefs.getString(Constants.PREFS_NAME_BT_ADDRESS_1, null);
+            if(i == 2)
+                mStr = mPrefs.getString(Constants.PREFS_NAME_BT_ADDRESS_2, null);
+            if(i == 3)
+                mStr = mPrefs.getString(Constants.PREFS_NAME_BT_ADDRESS_3, null);
+            if(i == 4)
+                mStr = mPrefs.getString(Constants.PREFS_NAME_BT_ADDRESS_4, null);
+            if(i == 5)
+                mStr = mPrefs.getString(Constants.PREFS_NAME_BT_ADDRESS_5, null);
+            if(i == 6)
+                mStr = mPrefs.getString(Constants.PREFS_NAME_BT_ADDRESS_6, null);
+            if(mStr != null) {
+                mStr = String.valueOf(i) + ": " + mStr;
+                mDevicesArrayAdapter.add(mStr);
+            }
+        }
+        mDevicesArrayAdapter.notifyDataSetChanged();
+        setListViewHeightBasedOnChildren(mDevicesListView);
     }
 
     private AdapterView.OnItemClickListener mDeviceClickListener = new AdapterView.OnItemClickListener() {
+
+        public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3) {
+            String mInfo = ((TextView) v).getText().toString();
+            final String mBTAddress = mInfo.substring(mInfo.length() - 17);
+            final String mBTName = mInfo.substring(0, mInfo.length() - 17);
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext());
+            builder.setTitle("REMOVE " + mBTName.substring(0, 1) + ": " + mBTAddress + "?");
+            // Set up the input
+            //builder.setIcon(android.R.drawable.ic_dialog_alert);
+            // Set up the buttons
+            builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    int index = Integer.valueOf(mBTName.substring(0, 1));
+                    //mBTSPP2FileService.serviceThreadRun[index] = false;
+                    //mBTSPP2FileService.btCancel(index);
+                    //mBTSPP2FileService.Connect(index, null);
+                    mBTSPP2FileService.Disconnect(index);
+                    listDevices();
+                }
+            });
+            builder.setNegativeButton("CANCEL", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.cancel();
+                    return;
+                }
+            });
+            builder.show();
+
+            //String mInfo = ((TextView) v).getText().toString();
+            //final int index = Integer.valueOf(mInfo.substring(0, 1));
+            //mBTSPP2FileService.serviceThreadRun[index] = false;
+            //mBTSPP2FileService.btCancel(index);
+            //mBTSPP2FileService.Connect(index, null);
+            //mBTSPP2FileService.Disconnect(index);
+            //listDevices();
+        }
+    };
+
+    private AdapterView.OnItemClickListener mPairedDeviceClickListener = new AdapterView.OnItemClickListener() {
+
         public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3) {
 
             String mInfo = ((TextView) v).getText().toString();
             final String mBTAddress = mInfo.substring(mInfo.length() - 17);
             final String mBTName = mInfo.substring(0, mInfo.length() - 17);
-            /*
-            // Spawn a new thread to avoid blocking the GUI one
-            new Thread() {
-                public void run() {
-                    if(!isMyServiceRunning(BTSPP2FileService.class)) {
-                        startService(new Intent(getBaseContext(), BTSPP2FileService.class));
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext());
+            builder.setTitle("INDEX 0-6: " + mBTAddress);
+            // Set up the input
+            final EditText input = new EditText(v.getContext());
+            // Specify the type of input expected; this, for example, sets the input as a password, and will mask the text
+            input.setInputType(InputType.TYPE_CLASS_NUMBER);
+            input.setText("0");
+            builder.setView(input);
+            // Set up the buttons
+            builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    int index = -1;
+                    try {
+                        index = Integer.valueOf(input.getText().toString());
                     }
-                    mBTSPP2FileService.Connect(mBTAddress);
+                    catch (Exception e) {
+                        Log.i(TAG, e.toString());
+                    }
+
+                    if(index > -1 && index < 7) {
+                        if (!isMyServiceRunning(BTSPP2FileService.class)) {
+                            startService(new Intent(getBaseContext(), BTSPP2FileService.class));
+                        }
+                        mBTSPP2FileService.Connect(index, mBTAddress);
+                    }
+                    listDevices();
                 }
-            }.start();
-            */
+            });
+            builder.setNegativeButton("CANCEL", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.cancel();
+                    return;
+                }
+            });
+            builder.show();
+
+
+
+            /*
             if(!isMyServiceRunning(BTSPP2FileService.class)) {
                 startService(new Intent(getBaseContext(), BTSPP2FileService.class));
             }
-            mBTSPP2FileService.Connect(mBTAddress);
+            mBTSPP2FileService.Connect(arg2, mBTAddress);
+            */
         }
     };
         /*
@@ -751,6 +910,9 @@ public class MainActivity extends Activity {
             }
         }
     };
+
+
+
 }
 
 

@@ -6,7 +6,13 @@ package cz.growmat.btspp2file;
 
 public class Constants {
     public static final String PREFS_NAME = "BLUETOOTH_SERIAL_BRIDGE";
-    public static final String PREFS_NAME_BT_ADDRESS = "BLUETOOTH_ADDRESS";
+    public static final String PREFS_NAME_BT_ADDRESS_0 = "BLUETOOTH_ADDRESS_0";
+    public static final String PREFS_NAME_BT_ADDRESS_1 = "BLUETOOTH_ADDRESS_1";
+    public static final String PREFS_NAME_BT_ADDRESS_2 = "BLUETOOTH_ADDRESS_2";
+    public static final String PREFS_NAME_BT_ADDRESS_3 = "BLUETOOTH_ADDRESS_3";
+    public static final String PREFS_NAME_BT_ADDRESS_4 = "BLUETOOTH_ADDRESS_4";
+    public static final String PREFS_NAME_BT_ADDRESS_5 = "BLUETOOTH_ADDRESS_5";
+    public static final String PREFS_NAME_BT_ADDRESS_6 = "BLUETOOTH_ADDRESS_6";
     public static final String PREFS_NAME_AUTO_TEST = "AUTO_TEST";
     public static final String PREFS_NAME_WAIT_FOR_ANSWER = "WAIT_FOR_ANSWER";
     public static final String PREFS_NAME_PATH = "PATH";

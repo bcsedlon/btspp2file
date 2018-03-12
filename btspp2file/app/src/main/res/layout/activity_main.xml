@@ -182,6 +182,27 @@
             android:layout_toRightOf="@+id/checkboxLED1"
             android:layout_toEndOf="@+id/checkboxLED1" />
     -->
+
+            <TextView
+                android:id="@+id/textDevices"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAlignment="center"
+                android:text="DEVICES" />
+
+            <ListView
+                android:id="@+id/devicesListView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:choiceMode="singleChoice"
+                android:footerDividersEnabled="true"
+                android:headerDividersEnabled="true" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@android:color/black"/>
+
             <TextView
                 android:id="@+id/textPairedDevices"
                 android:layout_width="match_parent"
@@ -190,10 +211,12 @@
                 android:text="PAIRED DEVICES" />
 
             <ListView
+                android:id="@+id/pairedDevicesListView"
                 android:layout_width="match_parent"
-                android:layout_height="200sp"
-                android:id="@+id/devicesListView"
-                android:choiceMode="singleChoice" />
+                android:layout_height="wrap_content"
+                android:choiceMode="singleChoice"
+                android:footerDividersEnabled="true"
+                android:headerDividersEnabled="true" />
 
     <!--
             <Button
@@ -231,10 +254,11 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textAlignment="center"
-                android:text="INFO" />
+                android:text="PATH" />
 
             <TextView
                 android:id="@+id/textInfoText"
+                android:textAlignment="center"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
                 <!--
