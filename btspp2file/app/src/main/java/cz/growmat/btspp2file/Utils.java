@@ -20,12 +20,13 @@ public class Utils {
         path = Environment.getExternalStorageDirectory().getAbsolutePath() + path;
         try {
             new File(path).mkdir();
-            new File(path, String.valueOf(index)).mkdir();
+
             File file;
             if(index < 0) {
                 file = new File(path, fileName);
             }
             else {
+                new File(path, String.valueOf(index)).mkdir();
                 file = new File(path + String.valueOf(index), fileName);
             }
             if (!file.exists()) {
