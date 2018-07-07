@@ -27,6 +27,7 @@ import android.os.SystemClock;
 import android.text.format.Time;
 import android.util.Log;
 
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -401,20 +402,32 @@ public class BTSPP2FileService extends Service {
             public void run() {
                 while (serviceThreadRun[index]) {
                     try {
-                        char[] buffer = new char[1024];  // Buffer store for the stream
+                        //char[] buffer = new char[1024];  // Buffer store for the stream
+                        byte[] buffer = new byte[1024];  // Buffer store for the stream
                         int bytes; // Bytes returned from read()
                         File file = new File(mPath + String.valueOf(index), mTxFileName);
 
                         if(file.exists()) {
                             FileInputStream fileInputStream = new FileInputStream(file);
-                            InputStreamReader inputStreamReader = new InputStreamReader(fileInputStream);
+                            //InputStreamReader inputStreamReader = new InputStreamReader(fileInputStream);
+                            DataInputStream dataInputStream = new DataInputStream(fileInputStream);
+                            //while ((bytes = inputStreamReader.read(buffer, 0, 1024)) > -1) {
+                            while ((bytes = dataInputStream.read(buffer, 0, 1024)) > -1) {
+                                //btSend(index, String.valueOf(buffer, 0, bytes));
+                                //btSend(index, new String(buffer).getBytes(), 0, bytes);
+                                btSend(index, buffer, 0, bytes);
+                                //Log.d(TAG, String.valueOf(buffer, 0, bytes));
 
-                            while ((bytes = inputStreamReader.read(buffer, 0, 1024)) > -1) {
-                                btSend(index, String.valueOf(buffer, 0, bytes));
-                                Log.d(TAG, String.valueOf(buffer, 0, bytes));
+
+
+                                //String mTxFileName2 = "tmp.txt";//Constants.DEFAULT_TX_FILENAME;
+                                //String mPath2 = Constants.DEFAULT_PATH;
+                                //Utils.saveToFile(0, mPath2, mTxFileName2, buffer, bytes);
+
                             }
 
-                            inputStreamReader.close();
+                            //inputStreamReader.close();
+                            dataInputStream.close();
                             fileInputStream.close();
 
                             //TODO: Wait for data
@@ -516,7 +529,19 @@ public class BTSPP2FileService extends Service {
         }
     };
 
+    public boolean btSend(int index, byte[] buffer, int offset, int count) {
+        if (streamServiceThread[index] != null) {
+            if (streamServiceThread[index].isAlive()) {
+                streamServiceThread[index].write(buffer, offset, count);
+                return true;
+            }
+        }
+        return false;
+    }
     public boolean btSend(int index, String data){
+        String s = new  String(data);
+        return btSend(index, s.getBytes(), 0, s.getBytes().length);
+        /*
         if (streamServiceThread[index] != null) {
             if (streamServiceThread[index].isAlive()) {
                 streamServiceThread[index].write(data);
@@ -524,6 +549,7 @@ public class BTSPP2FileService extends Service {
             }
         }
         return false;
+        */
     };
 
     private BroadcastReceiver onNotice = new BroadcastReceiver() {
