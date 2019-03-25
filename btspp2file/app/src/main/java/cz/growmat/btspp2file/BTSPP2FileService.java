@@ -31,10 +31,12 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -69,8 +71,6 @@ public class BTSPP2FileService extends Service {
     private boolean autoTestRunning = false;
 
     private AtomicBoolean[] btStarting = {null, null, null, null, null, null, null};
-
-
 
     public void startAutoTest() {
         if(autoTestRunning)
@@ -295,6 +295,9 @@ public class BTSPP2FileService extends Service {
                 return false;
             }
         }
+
+        //Utils.closePipes();
+
         return true;
     };
 
@@ -454,6 +457,70 @@ public class BTSPP2FileService extends Service {
                 }
             }
         }.start();
+
+        new Thread() {
+            SharedPreferences mPrefs = getSharedPreferences(Constants.PREFS_NAME, 0);
+            //String mPath = Environment.getExternalStorageDirectory().getAbsolutePath() + mPrefs.getString(Constants.PREFS_NAME_PATH, Constants.DEFAULT_PATH);
+            String mPath = mPrefs.getString(Constants.PREFS_NAME_PIPEPATH, Constants.DEFAULT_PIPEPATH) + String.valueOf(index) + "/";
+            String mTxPipeName = Constants.DEFAULT_TX_PIPENAME;
+            String mRxPipeName = Constants.DEFAULT_RX_PIPENAME;
+
+            // Let it continue running until it is stopped.
+            public void run() {
+                InputStreamReader inputStreamReader = null;
+                char[] buffer = new char[1024];  // Buffer store for the stream
+                int bytes; // Bytes returned from read()
+                //char[] buffer = new char[1024];  // Buffer store for the stream
+
+                try {
+                    //Log.i(TAG, String.valueOf(index) + " creating input pipe...");
+                    //Utils.createPipe(mPath, mTxPipeName).close();
+                    Log.i(TAG, String.valueOf(index) + " opening input pipe...");
+                    //inputStreamReader = new InputStreamReader(new FileInputStream(mPath + String.valueOf(index) + "/" + mTxPipeName));
+                    inputStreamReader = new InputStreamReader(new FileInputStream(mPath + mTxPipeName));
+                }  catch (Exception e) {
+                    Log.e(TAG, String.valueOf(index) + " " + e.getMessage());
+                    return;
+                }
+                while (serviceThreadRun[index]) {
+
+                    try {
+                        while ((bytes = inputStreamReader.read(buffer, 0, 1024)) > -1) {
+                            //btSend(index, String.valueOf(buffer, 0, bytes));
+                            //btSend(index, new String(buffer).getBytes(), 0, bytes);
+                            //btSend(index, buffer, 0, bytes);
+
+                            Log.i(TAG, String.valueOf(index) + " TX: " + String.valueOf(buffer, 0, bytes));
+                            btSend(index, new String(buffer).getBytes() , 0, bytes);
+
+                            //try {
+                            //    Utils.writeToPipe(index, mPath, mRxPipeName, buffer, bytes);
+                            //}   catch (Exception e){
+                            //    Log.i(TAG, String.valueOf(index) + " " + e.getMessage());
+                            //}
+                            //String mTxFileName2 = "tmp.txt";//Constants.DEFAULT_TX_FILENAME;
+                            //String mPath2 = Constants.DEFAULT_PATH;
+                            //Utils.saveToFile(0, mPath2, mTxFileName2, buffer, bytes);
+
+                        }
+
+                        //TODO: Wait for data
+                        if (waitForAnswer) {
+                            SystemClock.sleep(250);
+                        }
+
+                    }  catch (Exception e) {
+                        Log.w(TAG, String.valueOf(index) + " " + e.getMessage());
+                        return;
+                    }
+
+
+                    SystemClock.sleep(250);
+                }
+            }
+        }.start();
+
+
 
         Log.i(TAG, String.valueOf(index) + " btStarted");
         btStarting[index].set(false);
@@ -669,7 +736,10 @@ class StreamServiceThread extends Thread {
         //SharedPreferences mPrefs = getSharedPreferences(Constants.PREFS_NAME, 0);
         //String mPath = Environment.getExternalStorageDirectory().getAbsolutePath() + mPrefs.getString(Constants.PREFS_NAME_PATH, Constants.DEFAULT_PATH);
         String mPath = Constants.DEFAULT_PATH;
-        String mTxFileName = Constants.DEFAULT_RX_FILENAME;
+        String mRxFileName = Constants.DEFAULT_RX_FILENAME;
+
+        String mPipePath = Constants.DEFAULT_PIPEPATH;
+        String mRxPipeName = Constants.DEFAULT_RX_PIPENAME;
 
         byte[] buffer = new byte[1024];  // Buffer store for the stream
         int bytes; // Bytes returned from read()
@@ -680,7 +750,12 @@ class StreamServiceThread extends Thread {
                 bytes = mInStream.read(buffer);
 
                 //TODO: listener
-                Utils.saveToFile(index, mPath, mTxFileName, buffer, bytes);
+                Utils.saveToFile(index, mPath, mRxFileName, buffer, bytes);
+
+                //TODO: conversion?
+                String s = new String(buffer, 0, bytes);
+                Log.i(TAG, String.valueOf(index) + " RX: " + s);
+                Utils.writeToPipe(index, mPipePath, mRxPipeName, s.toCharArray(), bytes);
 
             } catch (IOException e) {
                 Log.d(TAG, e.toString());
